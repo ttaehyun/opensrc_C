@@ -32,6 +32,83 @@ void hovered(Button button, SDL_Texture** tp_texture, SDL_Texture* texture, SDL_
     else *tp_texture = texture;
 }
 
+void startmain(SDL_Renderer** renderer, SDL_Event* e, SDL_Surface* img, Status* status, SDL_Texture** tp_maindisplay, SDL_Texture* texture_gamemain, bool* quit) {
+
+    while(SDL_PollEvent(e)) {
+        switch (e->type) {
+        case SDL_QUIT:
+            *quit = true;
+            break;
+        case SDL_MOUSEBUTTONDOWN:
+            printf("Mouse Button Pressed: %d at (%d, %d)\n", e->button.button, e->button.x, e->button.y);
+            
+            if(e->button.button == 1) {
+                g_rule_button->pressed = check_in_xy(e->motion.x, e->motion.y, *g_rule_button);
+                g_start_button->pressed = check_in_xy(e->motion.x, e->motion.y, *g_start_button);
+                back_button->pressed = check_in_xy(e->motion.x, e->motion.y, *back_button);
+            }
+            break;
+        case SDL_MOUSEBUTTONUP:
+            printf("Mouse Button Released: %d at (%d, %d)\n", e->button.button, e->button.x, e->button.y);
+            break;
+        case SDL_MOUSEMOTION:
+            g_rule_button->hovered = check_in_xy(e->motion.x, e->motion.y, *g_rule_button);
+            g_start_button->hovered = check_in_xy(e->motion.x, e->motion.y, *g_start_button);
+            back_button->hovered = check_in_xy(e->motion.x, e->motion.y, *back_button);
+            break;
+        case SDL_KEYDOWN:
+            if (e->key.keysym.sym == SDLK_ESCAPE) {
+                *quit = true;
+            }
+        default:
+            break;
+        }
+    }
+    //
+    SDL_RenderCopy(renderer, tp_maindisplay, NULL, &main);
+
+        if (status.game == false &&status.info == false ) {
+            if (g_start_button.pressed) {
+                tp_maindisplay = texture_gamemain;
+                status.game = true;
+            }
+            else {
+                SDL_RenderCopy(renderer, tp_startbutton, NULL, &g_start_button.rect);
+                SDL_RenderCopy(renderer, tp_infobutton, NULL, &g_rule_button.rect);
+            }
+        }
+    //
+    if (status.info == false) {
+            if (g_rule_button.pressed) {
+                status.info = true;
+            }
+        }
+        else {
+            if (back_button.pressed) {
+                status.info = false;
+            }
+            else SDL_RenderCopy(renderer, tp_backbutton, NULL, &back_button.rect);
+
+        }
+
+    // Game logic based on events
+    if (!status->game && !status->info) {
+        if (g_start_button->pressed) {
+            *tp_maindisplay = texture_gamemain;
+            status->game = true;
+        }
+    }
+
+    if (status->info) {
+        if (back_button->pressed) {
+            status->info = false;
+        }
+        else SDL_RenderCopy(renderer, tp_backbutton, NULL, &back_button.rect);
+    }
+    hovered(g_start_button, &tp_startbutton, texture_startbutton, texture_startbutton_hovered);
+    hovered(g_rule_button,&tp_infobutton, texture_infobutton,texture_infobutton_hovered);
+    hovered(back_button,&tp_backbutton, texture_backbutton,texture_backbutton_hovered);
+}
 
 int main(int argc, char* argv[]) {
     SDL_Init(SDL_INIT_VIDEO);
@@ -70,78 +147,27 @@ int main(int argc, char* argv[]) {
 
     SDL_Event e;
 
-    Button g_start_button = {{490, 360, startButton->w, startButton->h}, false, false};
-    Button g_rule_button = {{490,540,infoButton->w,infoButton->h}, false, false};
-    Button back_button = {{1000,650, backButton->w, backButton->h},false, false};
+    Button* buttons = (Button*)malloc(3 * sizeof(Button));
+    if (buttons == NULL) {
+        perror("Failed to allocate memory for buttons");
+        exit(1);
+    }
+    //g_start_button
+    buttons[0] = {{490, 360, startButton->w, startButton->h}, false, false};    
+    //g_rule_button
+    buttons[1] = {{490,540,infoButton->w,infoButton->h}, false, false};
+    //back_button
+    buttons[2] = {{1000,650, backButton->w, backButton->h},false, false};
 
     Status status = {false, false};
     bool quit = false;
     
     while(!quit) {
-        while(SDL_PollEvent(&e)) {
-            switch (e.type) {
-            case SDL_QUIT:
-                quit = true;
-                break;
-            case SDL_MOUSEBUTTONDOWN:
-                printf("Mouse Button Pressed: %d at (%d, %d)\n", e.button.button, e.button.x, e.button.y);
-               
-                if(e.button.button == 1) {
-                    g_rule_button.pressed = check_in_xy(e.motion.x, e.motion.y, g_rule_button);
-                    g_start_button.pressed = check_in_xy(e.motion.x, e.motion.y, g_start_button);
-                }
-            
-            
-                if (e.button.button ==1 ) {
-                    back_button.pressed = check_in_xy(e.motion.x,e.motion.y, back_button);
-                }
-            
-                break;
-            case SDL_MOUSEBUTTONUP:
-                printf("Mouse Button Released: %d at (%d, %d)\n", e.button.button, e.button.x, e.button.y);
-                break;
-            case SDL_MOUSEMOTION:
-                g_rule_button.hovered = check_in_xy(e.motion.x, e.motion.y, g_rule_button);
-                g_start_button.hovered = check_in_xy(e.motion.x, e.motion.y, g_start_button);
-                back_button.hovered = check_in_xy(e.motion.x, e.motion.y, back_button);
-                //printf("Mouse Moved to (%d, %d) with Motion X: %d, Motion Y: %d\n", e.motion.x, e.motion.y, e.motion.xrel, e.motion.yrel);
-                break;
-            case SDL_KEYDOWN:
-                if (e.key.keysym.sym == SDLK_ESCAPE) {
-                    quit = true;
-                }
-            default:
-                break;
-            }
-        }
-        SDL_RenderCopy(renderer, tp_maindisplay, NULL, &main);
+       startmain();
+        
+        
 
-        if (status.game == false &&status.info == false ) {
-            if (g_start_button.pressed) {
-                tp_maindisplay = texture_gamemain;
-                status.game = true;
-            }
-            else {
-                SDL_RenderCopy(renderer, tp_startbutton, NULL, &g_start_button.rect);
-                SDL_RenderCopy(renderer, tp_infobutton, NULL, &g_rule_button.rect);
-            }
-        }
-        if (status.info == false) {
-            if (g_rule_button.pressed) {
-                status.info = true;
-            }
-        }
-        else {
-            if (back_button.pressed) {
-                status.info = false;
-            }
-            else SDL_RenderCopy(renderer, tp_backbutton, NULL, &back_button.rect);
-
-        }
-
-        hovered(g_start_button, &tp_startbutton, texture_startbutton, texture_startbutton_hovered);
-        hovered(g_rule_button,&tp_infobutton, texture_infobutton,texture_infobutton_hovered);
-        hovered(back_button,&tp_backbutton, texture_backbutton,texture_backbutton_hovered);
+        
 
         SDL_RenderPresent(renderer);
     }
