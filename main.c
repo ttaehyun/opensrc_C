@@ -306,6 +306,13 @@ void startmain(SDL_Renderer** renderer, SDL_Event* e, SDL_Rect* mainImg, SDL_Tex
     SDL_DestroyTexture(texture_gametuto_button);
     SDL_DestroyTexture(texture_gametuto_button_hovered);
 
+    SDL_DestroyTexture(texture_num_1_button);
+    SDL_DestroyTexture(texture_num_1_button_hovered);
+    SDL_DestroyTexture(texture_num_2_button);
+    SDL_DestroyTexture(texture_num_2_button_hovered);
+    SDL_DestroyTexture(texture_num_3_button);
+    SDL_DestroyTexture(texture_num_3_button_hovered);
+
     SDL_DestroyTexture(texture_infomain_Img);
     SDL_DestroyTexture(texture_win_Img);
     SDL_DestroyTexture(texture_rule_Img1);
@@ -326,6 +333,13 @@ void startmain(SDL_Renderer** renderer, SDL_Event* e, SDL_Rect* mainImg, SDL_Tex
     SDL_FreeSurface(win_button_hovered);
     SDL_FreeSurface(gametuto_button);
     SDL_FreeSurface(gametuto_button_hovered);
+
+    SDL_FreeSurface(number_1_button);
+    SDL_FreeSurface(number_1_button_hovered);
+    SDL_FreeSurface(number_2_button);
+    SDL_FreeSurface(number_2_button_hovered);
+    SDL_FreeSurface(number_3_button);
+    SDL_FreeSurface(number_3_button_hovered);
 
     SDL_FreeSurface(infomain_img);
     SDL_FreeSurface(win_img);
