@@ -509,16 +509,58 @@ typedef struct {
     int dice_num;
     bool hovered;
     bool pressed;
+    int pressed_number;
 } Tp_dice;
 
 typedef struct {
-    int ID;
-    int max_horse;
-    int use_horse;
+    SDL_Surface* player_banner;
+    SDL_Texture* texture;
+} Player_banner;
 
+typedef struct {
+    //몇 번 등산로인지
+    int hiking_num;
+    //등산로에서 몇 번째 줄인지
+    int num;
+    //이미지 xy좌표 출력
+    int map_x;
+    int map_y;
+} map_xy_num;
+
+typedef struct {
+    //몇 번 등산로인지
+    int hiking_num;
+    //등산로에서 몇 번째 줄인지
+    int num;
+    //이미지 xy좌표 출력
+    int map_x;
+    int map_y[];
+} map_xy_data;
+
+typedef struct {
+    int top;
+    map_xy_data* xy;
+    
+} map_data;
+
+typedef struct {
+    int ID;
+    int max_basecamp;
+    int use_basecamp;
+    int tp_horse;
+    int tp_use_horse;
+    map_xy_num* horses_data;
     SDL_Surface* player_img;
     SDL_Texture* texture;
 } Player;
+
+typedef struct {
+    int hiking_num;
+    int y;
+    SDL_Surface* horse_img;
+    SDL_Texture* texture;
+    SDL_Rect rect;
+} Temp_horse;
 
 typedef struct {
     int sum1;
@@ -542,6 +584,65 @@ void hovered_dice(bool tp_dice_hovered, SDL_Texture** tp_texture, SDL_Texture** 
     else *tp_texture = *texture;
 }
 
+void initial_temp_horse(Temp_horse* horse, const char* address, SDL_Renderer** renderer, int rect_x, int rect_y, int hiking_num, int y) {
+    if(horse!= NULL) {
+        horse->horse_img = IMG_Load(address);
+        if (horse->horse_img != NULL) {
+            horse->texture = SDL_CreateTextureFromSurface(*renderer, horse->horse_img);
+            horse->hiking_num = hiking_num;
+            horse->y = y;
+            horse->rect.x = rect_x;
+            horse->rect.y = rect_y;
+            horse->rect.w = horse->horse_img->w;
+            horse->rect.h = horse->horse_img->h;
+        }
+        else {fprintf(stderr, "Failed to load image: %s\n", IMG_GetError());}
+    }
+}
+
+void initial_player_banner(Player_banner* banner, const char* address, SDL_Renderer** renderer) {
+    if(banner!= NULL) {
+        banner->player_banner = IMG_Load(address);
+        if (banner->player_banner != NULL) {
+            banner->texture = SDL_CreateTextureFromSurface(*renderer, banner->player_banner);
+        }
+        else {fprintf(stderr, "Failed to load image: %s\n", IMG_GetError());}
+    }
+}
+//맵 각 위치에 대한 데이터
+void initial_map_data(map_data* map) {
+    if (map != NULL) {
+        map->xy = (map_xy_data*)malloc(11 * sizeof(map_xy_data));
+        if(map->xy != NULL) {
+            for (int i=2; i<=7; i++) {
+                map->xy->hiking_num = i;
+                map->xy[i-2].num = i+1;
+                map->top = i + 1;
+                map->xy[i-2].map_x = 50 * (i-1);
+                for (int k = 2; k <= 7; k++) {
+                    for (int n = 0; n < k + 1; n++) {
+                        map->xy[i-2].map_y[n] = 50 * (n+1);
+                    }
+                }
+            }
+            int tp = 7;
+            for (int i=8; i<=12; i++) {
+                map->xy->hiking_num = i;
+                map->top = tp;
+                map->xy[i-2].num = tp;
+                map->xy[i-2].map_x = 50 * (i-1);
+                for (int k = tp; k>=2; k--) {
+                    for (int n = 0; n< k; n++) {
+                        map->xy[i-2].map_y[n] = 50 * (n+ 1);
+                    }
+                }
+                tp--;
+            }
+        }
+        //몇 번 등산로인지
+    }
+}
+
 void initial_Dice(Dice* dice,const char* address,const char* address_hovered,SDL_Renderer** renderer, int num) {
     if(dice !=NULL) {
         dice->dice_Img = IMG_Load(address);
@@ -558,7 +659,7 @@ void initial_Dice(Dice* dice,const char* address,const char* address_hovered,SDL
     }
 }
 
-void initial_tp_dice_rect(Tp_dice* dice_rect,SDL_Texture** texture,int x, int y,int w, int h, int dice_num, bool hovered, bool pressed) {
+void initial_tp_dice_rect(Tp_dice* dice_rect,SDL_Texture** texture,int x, int y,int w, int h, int dice_num, bool hovered, bool pressed, int pressed_number) {
     if (dice_rect !=NULL) {
         dice_rect->texture = *texture;
         dice_rect->rect.x = x;
@@ -568,20 +669,47 @@ void initial_tp_dice_rect(Tp_dice* dice_rect,SDL_Texture** texture,int x, int y,
         dice_rect->dice_num = dice_num;
         dice_rect->hovered = hovered;
         dice_rect->pressed = pressed;
+        dice_rect->pressed_number = pressed_number;
     }
 }
 
-void initial_Player(Player* player, const char* address, SDL_Renderer** renderer, int id, int max_horse, int use_horse) {
+void initial_Player(Player* player, const char* address, SDL_Renderer** renderer, int id, int max_horse, int use_horse, int tp_horse, int tp_use_horse) {
     if(player != NULL) {
         player->ID = id;
-        player->max_horse = max_horse;
-        player->use_horse = use_horse;
+        player->max_basecamp = max_horse;
+        player->use_basecamp = use_horse;
+        player->tp_horse = tp_horse;
+        player->tp_use_horse = tp_use_horse;
+        player->horses_data = (map_xy_num*)malloc(max_horse* sizeof(map_xy_num));
+        for (int i =0; i<max_horse; i++) {
+            if (player->horses_data != NULL) {
+                player->horses_data[i].hiking_num = 0;
+                player->horses_data[i].num = 0;
+                player->horses_data[i].map_x = 0;
+                player->horses_data[i].map_y = 0;
+            }
+        }
         player->player_img = IMG_Load(address);
         if (player->player_img != NULL) {
             player->texture = SDL_CreateTextureFromSurface(*renderer, player->player_img);
         }
         else {fprintf(stderr, "Failed to load image: %s\n", IMG_GetError());}
     }
+}
+
+void free_temp_horse(Temp_horse* horse) {
+    SDL_DestroyTexture(horse->texture);
+    SDL_FreeSurface(horse->horse_img);
+    free(horse);
+}
+void free_banner(Player_banner* banner) {
+    SDL_DestroyTexture(banner->texture);
+    SDL_FreeSurface(banner->player_banner);
+    free(banner);
+}
+
+void free_map_data(map_data* map) {
+    free(map);
 }
 
 void free_Dice(Dice* dice) {
@@ -599,47 +727,62 @@ void free_tp_dice_rect(Tp_dice* dice_rect) {
 }
 
 void free_player(Player* player) {
+    SDL_DestroyTexture(player->texture);
+    SDL_FreeSurface(player->player_img);
+    free(player->horses_data);
     free(player);
 }
 
 //* 게임 화면//
+
 void gamemain(SDL_Renderer** renderer, SDL_Event* e, int* status,int* player_num, bool* quit) {
     
     SDL_Surface* Main_img = IMG_Load("img/game.jpg");
     SDL_Surface* throw_button = IMG_Load("img/button/throwdice.jpg");
     SDL_Surface* throw_button_hovered = IMG_Load("img/button/throwdice_hovered.jpg");
-    //플레이어 배너 img
-    SDL_Surface* player1_banner = IMG_Load("img/player_banner/player1.jpg");
-    SDL_Surface* player2_banner = IMG_Load("img/player_banner/player2.jpg");
-    SDL_Surface* player3_banner = IMG_Load("img/player_banner/player3.jpg");
-    SDL_Surface* player4_banner = IMG_Load("img/player_banner/player4.jpg");
-    
+    SDL_Surface* turnout_img = IMG_Load("img/button/turnout.jpg");
+    SDL_Surface* turnout_hovered_img = IMG_Load("img/button/turnout_hovered.jpg");
+    SDL_Surface* check_img = IMG_Load("img/button/check.jpg");
+    SDL_Surface* check_hovered_img = IMG_Load("img/button/check_hovered.jpg");
+
+
     SDL_Texture* texture_Main_img = SDL_CreateTextureFromSurface(*renderer, Main_img);
     SDL_Texture* texture_throw_button = SDL_CreateTextureFromSurface(*renderer, throw_button);
     SDL_Texture* texture_throw_button_hovered = SDL_CreateTextureFromSurface(*renderer, throw_button_hovered);
-
-    //플레이어 텍스쳐
-    SDL_Texture* texture_player1_banner = SDL_CreateTextureFromSurface(*renderer, player1_banner);
-    SDL_Texture* texture_player2_banner = SDL_CreateTextureFromSurface(*renderer, player2_banner);
-    SDL_Texture* texture_player3_banner = SDL_CreateTextureFromSurface(*renderer, player3_banner);
-    SDL_Texture* texture_player4_banner = SDL_CreateTextureFromSurface(*renderer, player4_banner);
+    SDL_Texture* texture_turnout_button = SDL_CreateTextureFromSurface(*renderer, turnout_img);
+    SDL_Texture* texture_turnout_button_hovered = SDL_CreateTextureFromSurface(*renderer, turnout_hovered_img);
+    SDL_Texture* texture_check_button = SDL_CreateTextureFromSurface(*renderer, check_img);
+    SDL_Texture* texture_check_button_hovered = SDL_CreateTextureFromSurface(*renderer, check_hovered_img);
 
     SDL_Texture* tp_maindisplay = texture_Main_img;
     SDL_Texture* tp_throw_button = texture_throw_button;
-    
-    SDL_Texture* tp_player_banner = texture_player1_banner;
+    SDL_Texture* tp_turnout_button = texture_turnout_button;
+    SDL_Texture* tp_check_button = texture_check_button;
 
     SDL_Rect game_img = {0,0, Main_img->w, Main_img->h};
 
-    SDL_Rect player_banner_rect = {1300, 5, player1_banner->w, player1_banner->h};
+    Player_banner* banners = (Player_banner*)malloc(4 * sizeof(Player_banner));
+    if (banners == NULL) {
+        perror("Failed to allocate memory for buttons");
+        exit(1);
+    }
+    initial_player_banner(&banners[0], "img/player_banner/player1.jpg", renderer);
+    initial_player_banner(&banners[1], "img/player_banner/player2.jpg", renderer);
+    initial_player_banner(&banners[2], "img/player_banner/player3.jpg", renderer);
+    initial_player_banner(&banners[3], "img/player_banner/player4.jpg", renderer);
 
-    int count_button = 1;
+    SDL_Texture* tp_player_banner = banners[0].texture;
+    SDL_Rect player_banner_rect = {1300, 5, banners[0].player_banner->w, banners[0].player_banner->h};
+
+    int count_button = 3;
     Button* buttons = (Button*)malloc(count_button*sizeof(Button));
     if (buttons == NULL) {
         perror("Failed to allocate memory for buttons");
         exit(1);
     }
-    initial_Button(&buttons[0], 1330, 510, throw_button->w, throw_button->h, false, false);
+    initial_Button(&buttons[0], 1330, 410, throw_button->w, throw_button->h, false, false);
+    initial_Button(&buttons[1], 1330, 630, turnout_img->w, turnout_img->h, false, false);
+    initial_Button(&buttons[2], 1330, 520, check_img->w, check_img->h, false, false);
 
     //주사위 이미지 동적할당 저장
     Dice* diceses = (Dice*)malloc(6*sizeof(Dice));
@@ -655,7 +798,7 @@ void gamemain(SDL_Renderer** renderer, SDL_Event* e, int* status,int* player_num
     initial_Dice(&diceses[5], "img/dice/100Dice6.jpg","img/dice/100Dice6_hovered.jpg", renderer, 6);
 
     int x_dice = 1350;
-    int y_dice = 300;
+    int y_dice = 200;
     int main_dice_num = 4;
     //화면에 4개 주사위만 출력을 위해 임시 주사위 동적할당
     Tp_dice* tp_dice_rects = (Tp_dice*)malloc(main_dice_num*sizeof(Tp_dice));
@@ -663,80 +806,465 @@ void gamemain(SDL_Renderer** renderer, SDL_Event* e, int* status,int* player_num
         perror("Failed to allocate memory for buttons");
         exit(1);
     }
-    initial_tp_dice_rect(&tp_dice_rects[0], &diceses[0].texture, x_dice,y_dice,diceses[0].dice_Img->w,diceses[0].dice_Img->h,diceses[0].num,false,false);
-    initial_tp_dice_rect(&tp_dice_rects[1], &diceses[1].texture, x_dice + 100 + 10, y_dice, diceses[1].dice_Img->w,diceses[1].dice_Img->h, diceses[1].num,false,false);
-    initial_tp_dice_rect(&tp_dice_rects[2], &diceses[2].texture, x_dice, y_dice + 100 + 10, diceses[2].dice_Img->w,diceses[2].dice_Img->h, diceses[2].num,false,false);
-    initial_tp_dice_rect(&tp_dice_rects[3], &diceses[3].texture, x_dice + 100 + 10, y_dice + 100 +10, diceses[3].dice_Img->w,diceses[3].dice_Img->h, diceses[3].num,false,false);
-    
-    
-    //플레이어 동적할당
-    //Player* players = (Player*)malloc(*player_num* sizeof(Player));
-    
+    initial_tp_dice_rect(&tp_dice_rects[0], &diceses[0].texture, x_dice,y_dice,diceses[0].dice_Img->w,diceses[0].dice_Img->h,diceses[0].num,false,false,0);
+    initial_tp_dice_rect(&tp_dice_rects[1], &diceses[0].texture, x_dice + 100 + 10, y_dice, diceses[0].dice_Img->w,diceses[0].dice_Img->h, diceses[0].num,false,false,0);
+    initial_tp_dice_rect(&tp_dice_rects[2], &diceses[0].texture, x_dice, y_dice + 100 + 10, diceses[0].dice_Img->w,diceses[0].dice_Img->h, diceses[0].num,false,false,0);
+    initial_tp_dice_rect(&tp_dice_rects[3], &diceses[0].texture, x_dice + 100 + 10, y_dice + 100 +10, diceses[0].dice_Img->w,diceses[0].dice_Img->h, diceses[0].num,false,false,0);
 
+    Player* players = (Player*)malloc(4 * sizeof(Player));
+    if (players == NULL) {
+        perror("Failed to allocate memory for buttons");
+        exit(1);
+    }
+    initial_Player(&players[0], "img/basecamp/player1.jpg", renderer, 1, 10, 0, 3, 0);
+    initial_Player(&players[1], "img/basecamp/player2.jpg", renderer, 2, 10, 0, 3, 0);
+    initial_Player(&players[2], "img/basecamp/player3.jpg", renderer, 3, 10, 0 ,3, 0);
+    initial_Player(&players[3], "img/basecamp/player4.jpg", renderer, 4, 10, 0, 3, 0);
+
+    Temp_horse* horses = (Temp_horse*)malloc(3 * sizeof(Temp_horse));
+    if (horses == NULL) {
+        perror("Failed to allocate memory for buttons");
+        exit(1);
+    }
+    for (int i = 0; i< 3; i++) {
+        //맵데이터 생성 되면 x,y좌표 넣어주기
+        initial_temp_horse(&horses[i],"img/tp_horse.jpg", renderer, 0,0,0,0);
+    }
+
+    // map_data* Maps_data = (map_data*)malloc(1 * sizeof(map_data));
+    // if (Maps_data == NULL) {
+    //     perror("Failed to allocate memory for buttons");
+    //     exit(1);
+    // }
+    // initial_map_data(Maps_data);
+
+    
+    
     bool start_quit = false;
-    
+    bool stop_my_turn = false;
+    bool finish_game = false;
+    //
+    bool one_time = true;
+    //임시 등반말 한 개 남은 상태에서 어떤 조합을 쓸건지 선택했는지 여부
+    bool check_one_comb = false;
+    //주사위 조합 여부 확인
+    bool nothing_horse = false;
+    //주사위 랜덤굴리기 버튼 잠금
+    bool random_button_lock = false;
+    //주사위 조합 확인
+    bool check_combination = false;
+    //주사위 첫 던지기 판단
+    int throw_count = 0;
+    int tmp_throw_count = 0;
+    //누구 턴인지 파악
+    int who_turn = 1;
+    int count_player = 1;
     while(!start_quit) {
-        SDL_RenderCopy(*renderer, tp_maindisplay, NULL, &game_img);
-        SDL_RenderCopy(*renderer, tp_player_banner, NULL, &player_banner_rect);
-        while(SDL_PollEvent(e)) {
-            switch (e->type) {
-            case SDL_QUIT:
-                *quit = true;
-                start_quit = true;
-                break;
-            case SDL_MOUSEBUTTONDOWN:
-                printf("Mouse Button Pressed: %d at (%d, %d)\n", e->button.button, e->button.x, e->button.y);
-                for(int i=0; i< count_button; i++) {
-                    buttons[i].pressed = check_in_xy(e->motion.x, e->motion.y, buttons[i]);
+        while(!finish_game) {
+            while(count_player <= *player_num) {
+                //플레이어 게임 종료때 까지 무한 반복
+                
+                int count_pressed_number = 1;
+                Combination_dice comb = {0,0};
+                //플레이어 등반자 말 다 쓸 떄까지 턴 종료 못함
+                while(!stop_my_turn) {
+
                     
-                }
-                break;
-            case SDL_MOUSEBUTTONUP:
-                printf("Mouse Button Released: %d at (%d, %d)\n", e->button.button, e->button.x, e->button.y);
-                break;
-            case SDL_MOUSEMOTION:
-                for (int i = 0; i< count_button; i++) {
-                    buttons[i].hovered = check_in_xy(e->motion.x, e->motion.y, buttons[i]);
-                }
-                for (int i = 0; i< main_dice_num; i++) {
-                    tp_dice_rects[i].hovered = check_in_xy_dice(e->motion.x, e->motion.y, tp_dice_rects[i].rect);
-                }
-                break;
-            case SDL_KEYDOWN:
-                if (e->key.keysym.sym == SDLK_ESCAPE) {
-                    *quit = true;
-                    start_quit = true;
-                }
-            default:
-                break;
-            }
-        }
-        if (buttons[0].pressed) {
-            for (int i= 0; i<4; i++) {
-                int random = rand()%6;
-                tp_dice_rects[i].texture =diceses[random].texture;
-                tp_dice_rects[i].dice_num = diceses[random].num;
-            }
-            printf("dice_num %d\n", tp_dice_rects[0].dice_num);
-            printf("dice_num %d\n", tp_dice_rects[1].dice_num);
-            printf("dice_num %d\n", tp_dice_rects[2].dice_num);
-            printf("dice_num %d\n", tp_dice_rects[3].dice_num);
-            buttons[0].pressed = false;
-        }
-        else {
-            SDL_RenderCopy(*renderer, tp_dice_rects[0].texture, NULL, &tp_dice_rects[0].rect);
-            SDL_RenderCopy(*renderer, tp_dice_rects[1].texture, NULL, &tp_dice_rects[1].rect);
-            SDL_RenderCopy(*renderer, tp_dice_rects[2].texture, NULL, &tp_dice_rects[2].rect);
-            SDL_RenderCopy(*renderer, tp_dice_rects[3].texture, NULL, &tp_dice_rects[3].rect);
-            for (int i = 0; i<4; i++) {
-                hovered_dice(tp_dice_rects[i].hovered, &tp_dice_rects[i].texture, &diceses[tp_dice_rects[i].dice_num-1].texture, &diceses[tp_dice_rects[i].dice_num-1].texture_hovered);   
-            }
+                    tp_player_banner = banners[count_player-1].texture;
+                    SDL_RenderCopy(*renderer, tp_maindisplay, NULL, &game_img);
+                    SDL_RenderCopy(*renderer, tp_player_banner, NULL, &player_banner_rect);
+                    while(SDL_PollEvent(e)) {
+                        switch (e->type) {
+                        case SDL_QUIT:
+                            *quit = true;
+                            start_quit = true;
+                            stop_my_turn = true;
+                            finish_game = true;
+                            count_player += *player_num;
+                            break;
+                        case SDL_MOUSEBUTTONDOWN:
+                            //printf("Mouse Button Pressed: %d at (%d, %d)\n", e->button.button, e->button.x, e->button.y);
+                            for(int i=0; i< count_button; i++) {
+                                if (i == 1) {
+                                    if (players[count_player-1].tp_use_horse == players[count_player-1].tp_horse) {
+                                        buttons[i].pressed = check_in_xy(e->motion.x, e->motion.y, buttons[i]);
+                                    }
+                                }
+                                else if (i == 2) {
+                                    if (!check_one_comb) {
+                                        //printf("count number  %d\n", count_pressed_number);
+                                        if (count_pressed_number == 5) {
+                                            buttons[i].pressed = check_in_xy(e->motion.x, e->motion.y, buttons[i]);
+                                        }
+                                    }
+                                    else {
+                                        if (count_pressed_number == 3) {
+                                            buttons[i].pressed =check_in_xy(e->motion.x, e->motion.y, buttons[i]);
+                                        }
+                                    }
+                                }
+                                else if (i == 0) {
+                                    if (!random_button_lock) {
+                                        buttons[i].pressed = check_in_xy(e->motion.x, e->motion.y, buttons[i]);
+                                    }
+                                } 
+                            }
 
-        }
+                            if (throw_count > 0) {
+                                if (throw_count != tmp_throw_count) {
 
-        SDL_RenderCopy(*renderer, tp_throw_button, NULL, &buttons[0].rect);
-        hovered(buttons[0], &tp_throw_button, &texture_throw_button, &texture_throw_button_hovered);
-        SDL_RenderPresent(*renderer);
+                                    for (int i =0; i< main_dice_num; i++) {
+                                        if (!tp_dice_rects[i].pressed) {
+                                            tp_dice_rects[i].pressed = check_in_xy_dice(e->motion.x,e->motion.y, tp_dice_rects[i].rect);
+                                            if (tp_dice_rects[i].pressed) {
+                                                //등반말 한개 남은 상태에서 주사위 2개만 선택되게
+                                                if (!check_one_comb) {
+                                                    tp_dice_rects[i].pressed_number = count_pressed_number;
+                                                    count_pressed_number++;    
+                                                }
+                                                else {
+                                                    if (count_pressed_number <3) {
+                                                        tp_dice_rects[i].pressed_number = count_pressed_number;
+                                                        count_pressed_number++;
+                                                    }
+                                                }
+                                                //printf("tp_dice_rect[%d].pressed_number : %d\n", i, tp_dice_rects[i].pressed_number);
+                                                //printf("count_pressed_number %d\n", count_pressed_number);
+
+                                            }
+                                        }
+                                        // else {
+                                        //     printf("tp_dice_rect[%d].pressed_number : %d\n", i, tp_dice_rects[i].pressed_number);
+                                        //     printf("count_pressed_number %d\n", count_pressed_number);
+                                        // }
+                                    }
+                                }
+                            }
+                            break;
+                        case SDL_MOUSEBUTTONUP:
+                            //printf("Mouse Button Released: %d at (%d, %d)\n", e->button.button, e->button.x, e->button.y);
+                            break;
+                        case SDL_MOUSEMOTION:
+                            for (int i = 0; i< count_button; i++) {
+                                if (i==1) {
+                                    if (players[count_player-1].tp_use_horse == players[count_player-1].tp_horse) {
+                                        buttons[i].hovered = check_in_xy(e->motion.x, e->motion.y, buttons[i]);        
+                                    }
+                                }
+                                else if (i==2) {
+                                    if (!check_one_comb) {
+                                        //printf("count_pressed _number %d\n", count_pressed_number);
+                                        if (count_pressed_number == 5) {
+                                            buttons[i].hovered = check_in_xy(e->motion.x, e->motion.y, buttons[i]);
+                                        }
+                                    }
+                                    else {
+                                        if (count_pressed_number == 3) {
+                                            buttons[i].hovered = check_in_xy(e->motion.x, e->motion.y, buttons[i]);
+                                        }
+                                    }
+                                    
+                                }
+                                else buttons[i].hovered = check_in_xy(e->motion.x, e->motion.y, buttons[i]);
+                            }
+                            if (throw_count != tmp_throw_count) {
+
+                                for (int i = 0; i< main_dice_num; i++) {
+                                    tp_dice_rects[i].hovered = check_in_xy_dice(e->motion.x, e->motion.y, tp_dice_rects[i].rect);
+                                }
+                            }
+                            break;
+                        case SDL_KEYDOWN:
+                            if (e->key.keysym.sym == SDLK_ESCAPE) {
+                                *quit = true;
+                                start_quit = true;
+                                stop_my_turn = true;
+                                finish_game = true;
+                                count_player += *player_num;
+                                players[count_player-1].tp_use_horse = 4;
+                            }
+                        default:
+                            break;
+                        }
+                    }
+                    
+
+                        //주사위 랜덤굴리기
+                    if (buttons[0].pressed) {
+                        
+                        for (int i= 0; i<4; i++) {
+                            int random = rand()%6;
+                            tp_dice_rects[i].texture =diceses[random].texture;
+                            tp_dice_rects[i].dice_num = diceses[random].num;
+                        }
+                        throw_count++;
+                        // printf("dice_num %d\n", tp_dice_rects[0].dice_num);
+                        // printf("dice_num %d\n", tp_dice_rects[1].dice_num);
+                        // printf("dice_num %d\n", tp_dice_rects[2].dice_num);
+                        // printf("dice_num %d\n", tp_dice_rects[3].dice_num);
+                        buttons[0].pressed = false;
+                        random_button_lock = true;
+                        
+                    }
+                    else {
+                        //주사위 한번이라도 던져야 실행됨
+                        if (throw_count >0) {
+                            
+                            if (tp_dice_rects[0].pressed){
+                                tp_dice_rects[0].texture = diceses[tp_dice_rects[0].dice_num-1].texture_hovered;
+                            }
+                            if (tp_dice_rects[1].pressed) {
+                                tp_dice_rects[1].texture = diceses[tp_dice_rects[1].dice_num-1].texture_hovered;
+                            }
+                            if (tp_dice_rects[2].pressed) {
+                                tp_dice_rects[2].texture = diceses[tp_dice_rects[2].dice_num-1].texture_hovered;
+                            }
+                            if (tp_dice_rects[3].pressed) {
+                                tp_dice_rects[3].texture = diceses[tp_dice_rects[3].dice_num-1].texture_hovered;
+                            }
+                            SDL_RenderCopy(*renderer, tp_dice_rects[0].texture, NULL, &tp_dice_rects[0].rect);
+                            SDL_RenderCopy(*renderer, tp_dice_rects[1].texture, NULL, &tp_dice_rects[1].rect);
+                            SDL_RenderCopy(*renderer, tp_dice_rects[2].texture, NULL, &tp_dice_rects[2].rect);
+                            SDL_RenderCopy(*renderer, tp_dice_rects[3].texture, NULL, &tp_dice_rects[3].rect);
+                            for (int i = 0; i<4; i++) {
+                                hovered_dice(tp_dice_rects[i].hovered, &tp_dice_rects[i].texture, &diceses[tp_dice_rects[i].dice_num-1].texture, &diceses[tp_dice_rects[i].dice_num-1].texture_hovered);   
+                            }
+                        }
+                    }
+                    
+
+                    //턴 종료 버튼 누르면 플레이어 전환 (등반자 말을 모두 사용했을 때에만 작동)
+                    if (players[count_player-1].tp_use_horse == players[count_player-1].tp_horse) {
+                        if (buttons[1].pressed) {
+                            tp_turnout_button = texture_turnout_button;
+                            stop_my_turn = true;
+                            buttons[1].pressed = false;
+                            throw_count = 0;
+                            players[count_player].tp_use_horse = 0;
+                             //임시 말 차례 넘어갔으므로 초기화
+                            for (int i = 0; i<3; i++) {
+                                horses[i].hiking_num = 0;
+                                horses[i].y = 0;
+                                printf("등반 말 초기화");
+                            }
+                            if (count_player+1 > *player_num) {
+                                count_player = 1;
+                            }
+                            else count_player++;
+                        }
+                        if (nothing_horse) {
+                            stop_my_turn = true;
+                            throw_count = 0;
+                            nothing_horse = false;
+                            players[count_player].tp_use_horse = 0;
+                            for (int i = 0; i<3; i++) {
+                                horses[i].hiking_num = 0;
+                                horses[i].y = 0;
+                                printf("등반 말 초기화");
+                            }
+                            if (count_player+1 > *player_num) {
+                                count_player = 1;
+                            }
+                            else count_player++;
+                             //임시 말 차례 넘어갔으므로 초기화
+                        }
+                       
+                    }
+                   // if (one_time) {
+                    
+
+                 //  }
+                    //주사위 확정 버튼
+                    if (buttons[2].pressed) {
+                        tp_check_button = texture_check_button;
+                        //이전에 굴린 게 안변했는지 판단 여부
+                        tmp_throw_count = throw_count;
+                        check_one_comb = false;
+                        check_combination = true;
+                        random_button_lock = false;
+                        buttons[2].pressed = false;
+                    }
+                    //주사위 확정 짓기
+                    if (check_combination) {
+                        //등반말 한개 남았을 때 선택 지었는지
+                        
+                            //주사위 모두 선택했다면 조합의 합 구하기
+                            //눌린 주사위가 4개일 때
+                            //f (count_pressed_number == 5) {
+                        if (tp_dice_rects[0].pressed && tp_dice_rects[1].pressed && tp_dice_rects[2].pressed && tp_dice_rects[3].pressed) {
+
+                            for (int i = 0; i< main_dice_num; i++) {
+
+                                
+                                if (tp_dice_rects[i].pressed_number == 1) {
+                                    comb.sum1 += tp_dice_rects[i].dice_num;
+                                }
+                                else if(tp_dice_rects[i].pressed_number == 2) {
+                                    comb.sum1 += tp_dice_rects[i].dice_num;
+                                }
+                                else if(tp_dice_rects[i].pressed_number == 3) {
+                                    comb.sum2 += tp_dice_rects[i].dice_num;
+                                }
+                                else if(tp_dice_rects[i].pressed_number == 4) {
+                                    comb.sum2 += tp_dice_rects[i].dice_num;
+                                }
+                               
+
+
+                            }
+                            if (horses[0].hiking_num != 0 || horses[1].hiking_num != 0) {
+                                if ((horses[0].hiking_num != comb.sum1 && horses[0].hiking_num != comb.sum2) &&
+                                    (horses[1].hiking_num != comb.sum1 && horses[1].hiking_num != comb.sum2)) {
+                                        check_one_comb = true;
+                                }
+                            }
+                            printf("sum1 %d sum2 %d\n", comb.sum1, comb.sum2);
+                            //printf("%d", check_one_comb);
+                            printf("----");
+                            //one_time = false;
+                        }
+                            //등반말 3개
+                            if(players[count_player-1].tp_use_horse == players[count_player-1].tp_horse) {
+                                bool is_sum1 = true;
+                                bool is_sum2 = true;
+
+                                if (horses[0].hiking_num == comb.sum1) {
+                                    horses[0].y++; 
+                                }
+                                else if (horses[1].hiking_num == comb.sum1) {
+                                    horses[1].y++;                                       
+                                }
+                                else if (horses[2].hiking_num == comb.sum1) {
+                                    horses[2].y++;
+                                }
+                                else is_sum1 = false;
+
+                                if (horses[0].hiking_num ==comb.sum2) {
+                                    horses[0].y++;
+                                }
+                                else if (horses[1].hiking_num == comb.sum2 ) {
+                                    horses[1].y++;  
+                                }
+                                else if (horses[2].hiking_num == comb.sum2){
+                                    horses[2].y++;
+                                }
+                                else is_sum2 = false;
+                                if (!is_sum1 && !is_sum2) {
+                                    nothing_horse = true;
+                                }
+                                //players[count_player-1].tp_use_horse = 3;
+                                
+                            }
+                            //등반말 2개
+                            else if (players[count_player-1].tp_use_horse == 2) {
+                                if (!check_one_comb) {
+
+                                    if (horses[0].hiking_num == comb.sum1) {
+                                        horses[0].y++;
+                                        comb.sum1 = 0;
+                                    }
+                                    else if (horses[1].hiking_num == comb.sum1) {
+                                        horses[1].y++;
+                                        comb.sum1 = 0;
+                                    }
+
+                                    if (horses[0].hiking_num == comb.sum2) {
+                                        horses[0].y++;
+                                        comb.sum2 = 0;
+                                    }
+            
+                                    else if (horses[1].hiking_num == comb.sum2) {
+                                        horses[1].y++;
+                                        comb.sum2 = 0;
+                                    }
+                                    if (comb.sum1 != 0) {
+                                        horses[2].hiking_num = comb.sum1;
+                                        horses[2].y++;
+                                    }
+                                    else if (comb.sum2 != 0) {
+                                        horses[2].hiking_num = comb.sum2;
+                                        horses[2].y++;
+                                    }
+                                }
+                                else {
+                                    if (comb.sum1 != 0) {
+                                        horses[2].hiking_num = comb.sum1;
+                                        horses[2].y++;
+                                    }
+                                    else if (comb.sum2 != 0) {
+                                        horses[2].hiking_num = comb.sum2;
+                                        horses[2].y++;
+                                    }
+                                }
+                
+
+                                
+                                players[count_player-1].tp_use_horse++;
+                            }
+                            else {
+                                horses[0].hiking_num = comb.sum1;
+                                horses[0].y++;
+                                horses[1].hiking_num = comb.sum2;
+                                horses[1].y++;
+                                players[count_player-1].tp_use_horse = 2;
+                            }
+                            for (int i =0; i<main_dice_num; i++) {
+                                tp_dice_rects[i].pressed = false;
+                                tp_dice_rects[i].pressed_number = 0;
+                            }
+                            comb.sum1 = 0;
+                            comb.sum2 = 0;
+                            count_pressed_number = 1;
+                            check_combination = false;
+                            one_time = true;
+                            //저장된 임시 말 호출
+                            for (int i= 0; i<3; i++) {
+                                printf("horse %d, hiking num %d y %d\n", i, horses[i].hiking_num, horses[i].y);
+                                horses[i].rect.x = (horses[i].hiking_num + 1) * 80;
+                                horses[i].rect.y = 800 - (horses[i].y * 55);
+                            }
+                            
+                            // for (int i = 0; i<3; i++) {
+                            //     horses[i].rect.x = Maps_data[i].xy[horses[i].hiking_num-1].map_x;
+                            //     horses[i].rect.y = Maps_data[i].xy[horses[i].hiking_num-1].map_y[horses[i].y-1];
+
+                            // }
+                            
+                            //}
+                        //등반자 말 한개 남았을 때 판단여부
+                        //check_one_comb = false;
+                    }
+                    //첫 게임 시작 후 주사위 조합 한번 진행한 뒤 등반가 생성
+                    if (throw_count>0) {
+                        if (horses[0].rect.x != 0 && horses[0].rect.y !=0) {
+                            SDL_RenderCopy(*renderer,horses[0].texture, NULL, &horses[0].rect);
+                            SDL_RenderCopy(*renderer, horses[1].texture, NULL, &horses[1].rect);
+                            SDL_RenderCopy(*renderer, horses[2].texture, NULL, &horses[2].rect);
+                        }
+                    }
+                    // SDL_RenderCopy(*renderer, horses[0].texture, NULL, &horses[0].rect);
+                    // SDL_RenderCopy(*renderer, horses[1].texture, NULL, &horses[1].rect);
+                    // SDL_RenderCopy(*renderer, horses[2].texture, NULL, &horses[2].rect);
+                    
+                    SDL_RenderCopy(*renderer, tp_throw_button, NULL, &buttons[0].rect);
+                    SDL_RenderCopy(*renderer, tp_turnout_button, NULL, &buttons[1].rect);
+                    SDL_RenderCopy(*renderer, tp_check_button, NULL, &buttons[2].rect);
+
+                    hovered(buttons[0], &tp_throw_button, &texture_throw_button, &texture_throw_button_hovered);
+                    hovered(buttons[1], &tp_turnout_button, &texture_turnout_button, &texture_turnout_button_hovered);
+                    hovered(buttons[2], &tp_check_button, &texture_check_button, &texture_check_button_hovered);
+                    SDL_RenderPresent(*renderer);
+
+                
+                }
+                for (int i = 0; i<3;i++) {
+                    horses[0].rect.x = 0;
+                    horses[0].rect.y = 0;
+                }
+                stop_my_turn = false;
+            }
+        }
+        
     }
 
     SDL_DestroyTexture(texture_Main_img);
@@ -748,6 +1276,8 @@ void gamemain(SDL_Renderer** renderer, SDL_Event* e, int* status,int* player_num
     SDL_FreeSurface(throw_button);
     SDL_FreeSurface(throw_button_hovered);
 
+    free_temp_horse(horses);
+    free_banner(banners);
     free_buttons(buttons);
     free_Dice(diceses);
     free_tp_dice_rect(tp_dice_rects);
