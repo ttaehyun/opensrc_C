@@ -1120,7 +1120,7 @@ void gamemain(SDL_Renderer** renderer, SDL_Event* e, int* status,int* player_num
                             }
                             printf("sum1 %d sum2 %d\n", comb.sum1, comb.sum2);
                             //printf("%d", check_one_comb);
-                            printf("----");
+                            
                             //one_time = false;
                         }
                             //등반말 3개
@@ -1220,6 +1220,7 @@ void gamemain(SDL_Renderer** renderer, SDL_Event* e, int* status,int* player_num
                             //저장된 임시 말 호출
                             for (int i= 0; i<3; i++) {
                                 printf("horse %d, hiking num %d y %d\n", i, horses[i].hiking_num, horses[i].y);
+                                
                                 horses[i].rect.x = (horses[i].hiking_num + 1) * 80;
                                 horses[i].rect.y = 800 - (horses[i].y * 55);
                             }
